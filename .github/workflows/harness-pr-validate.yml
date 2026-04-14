@@ -1,0 +1,42 @@
+name: Harness PR Validation & Auto-Repair (OpenAI Standard)
+on: [pull_request]
+
+jobs:
+  harness-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Run Harness Validation (编译+Lint+测试)
+        run: |
+          mvn clean compile
+          mvn checkstyle:check
+          mvn test -Dcoverage=80
+          mvn verify
+      - name: Trigger Auto-Repair on Failure (通义灵码Agent)
+        if: failure()
+        run: |
+          # 导出错误日志
+          mvn test 2> harness/errors/ci-failure.log
+          # 调用通义灵码Agent自动修复
+          lingma agent run \
+            --prompt "修复当前PR的CI失败，严格遵守harness/config.yaml，重新提交并验证" \
+            --error-log harness/errors/ci-failure.log \
+            --workspace . \
+            --config harness/config.yaml
+          # 重新提交并推送
+          git config --global user.name "Harness-Agent"
+          git config --global user.email "agent@harness.com"
+          git add .
+          git commit -m "[AI-Harness] fix: auto-repair CI failure"
+          git push origin ${{ github.head_ref }}
+      - name: Auto-Merge on Success
+        if: success()
+        run: |
+          gh pr merge --merge --delete-branch ${{ github.event.pull_request.number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

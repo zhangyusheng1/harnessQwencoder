@@ -1,0 +1,37 @@
+# Model Context Protocol (MCP) Configuration for Design Prototype Integration
+# This configuration enables 1:1 pixel-perfect UI implementation from design prototypes
+
+mcp:
+  # Pixso Platform Configuration
+  pixso:
+    enabled: true
+    platform_key: "pixso"
+    api_endpoints:
+      # General API endpoint
+      general: "https://api.pixso.cn/v1"
+      # MCP-specific endpoint
+      mcp: "https://pixso.cn/api/mcp/mcp"
+    # Authentication method (requires session cookie)
+    auth_method: "session_cookie"
+    # Required headers
+    headers:
+      User-Agent: "Harness-Agent/1.0"
+      Accept: "application/json"
+    # File export settings
+    export:
+      formats: ["svg", "png", "jpg"]
+      default_format: "png"
+      quality: "high"
+    # Prototype processing settings
+    prototype:
+      extract_layers: true
+      extract_styles: true
+      extract_interactions: true
+      pixel_precision: true
+
+  # Global MCP Settings
+  global:
+    timeout: 30000  # 30 seconds timeout
+    retry_attempts: 3
+    cache_enabled: true
+    cache_ttl: 3600  # 1 hour cache TTL

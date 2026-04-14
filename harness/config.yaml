@@ -1,0 +1,49 @@
+# OpenAI Harness 核心配置（完全对标官方）
+harness:
+  # 1. Context Engineering 上下文规则
+  context:
+    max_tokens: 4096          # 上下文窗口上限
+    inject_strategy: on_demand # 按需注入，不一次性全塞
+    knowledge_source: repo     # 仓库即唯一真理源
+    agents_md: harness/AGENTS.md
+
+  # 2. Guardrails 架构与PR约束（原子化+边界控制）
+  guardrails:
+    task_split:
+      atomic_only: true        # 强制原子任务，禁止跨模块
+      max_pr_lines: 500        # 单PR最大代码行数
+      max_files_per_pr: 3      # 单PR最多修改文件数
+      pr_title_format: "[AI-Harness] {type}: {subtask} (#{task_id})"
+      branch_prefix: ["feature/", "fix/", "refactor/"]
+    architecture:
+      enforce_layers: true     # 强制分层依赖（Controller→Service→Repository）
+      forbidden_calls:
+        - Controller直接调用DB
+        - 未经授权第三方库
+        - 硬编码密钥
+    permissions:
+      read_only: [config/secrets, docs/architecture]
+      write_allowed: [src, tests, harness/scripts]
+
+  # 3. Closed-Loop Feedback 闭环校验规则
+  validation:
+    commands:
+      - mvn clean compile       # 编译检查
+      - mvn checkstyle:check    # 代码风格Lint
+      - mvn test                # 单元测试（覆盖率≥80%）
+      - mvn verify              # 集成测试
+    fail_strategy: auto_repair  # 失败自动修复，循环直到通过
+    max_retries: 5             # 最大重试次数
+    on_failure:
+      - 读取错误日志
+      - 定位问题代码
+      - 自动修复
+      - 重新提交+重跑校验
+      - 记录错误到harness/errors/
+
+  # 4. PR 规范（OpenAI审计标准）
+  pr:
+    template: PR_TEMPLATE.md
+    required_labels: ["AI-Generated", "Harness-Auto", "Review-Required"]
+    auto_merge: true           # CI全通过自动合并
+    delete_branch: true        # 合并后删除临时分支
