@@ -43,3 +43,5 @@ Thumbs.db
 config/secrets/
 temp/mcp-cache/
 harness/errors/mcp-errors.log
+.github-config
+.github-config
